@@ -1,6 +1,6 @@
 import os 
 import replicate
-os.environ["REPLICATE_API_TOKEN"] = "r8_BA8ZZg3EIH1VdJHR92xvwW13bBXJbEv2lPAH7"
+os.environ["REPLICATE_API_TOKEN"] = "r8_BA8ZZg3EIH1VdJHR92xvwW13bBXJbEv2lPAH7" #Update the tokken, cause the new LLAMA 3 version
 prompt_input = "Talk about the Inmoov project."
 pre_prompt = "You are a helpful assistant. You do not respond as 'User' or pretend to be 'User'. You only respond once as 'Assistant'."
 

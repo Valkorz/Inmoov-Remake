@@ -1,6 +1,6 @@
 import cv2 as cv
 import mediapipe as mp
-#import serial
+from serial import Serial
 
 
 def detection():
@@ -8,6 +8,7 @@ def detection():
     mp_holistic = mp.solutions.holistic
     capture = cv.VideoCapture(0)
     mp_drawing = mp.solutions.drawing_utils
+    ser = Serial('COM3', 9600)
     finger_count = 0
 
 
@@ -97,9 +98,16 @@ def detection():
             results.left_hand_landmarks,
             mp_holistic.HAND_CONNECTIONS
         )
+        
+        finger_vector_D_bytes = str(finger_vector_D).encode()
+        finger_vector_E_bytes = str(finger_vector_E).encode()
+
+        ser.write(finger_vector_D_bytes)
+        ser.write(finger_vector_E_bytes)
 
         cv.imshow("Live", frame)
         if cv.waitKey(5) & 0xFF == ord('q'):
+            ser.close()
             break
 
     capture.release()

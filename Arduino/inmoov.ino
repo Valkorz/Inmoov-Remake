@@ -1,25 +1,15 @@
+#include <PCA9685.h>
+
 /* HAND DETECTION WITH INMOOV + MEDIAPIPE */
-#include <Servo.h>
-#include <Adafruit_PWMServoDriver.h> //https://github.com/adafruit/Adafruit-PWM-Servo-Driver-Library
-Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
-
-#define SERVOMIN  150 // This is the 'minimum' pulse length count (out of 4096)
-#define SERVOMAX  600 // This is the 'maximum' pulse length count (out of 4096)
-#define USMIN  600 // This is the rounded 'minimum' microsecond length based on the minimum pulse of 150
-#define USMAX  2400 // This is the rounded 'maximum' microsecond length based on the maximum pulse of 600
-#define SERVO_FREQ 50 // Analog servos run at ~50 Hz updates
-
+PCA9685 servoController;
+PCA9685_ServoEval pwmServo;
 //Define servo pins for each finger
 
-Servo thumb, index, middle, ring, pinky;
-Servo fingers[] = {thumb, index, middle, ring, pinky};
-const int fingerPins[] = {11,10,9,6,5};
 const int range[] = {180,180,180,180,180};
 
 ////////////////////////////////////////////
-
 //Define data array
-#define DATA_LENGTH 256
+#define DATA_LENGTH 5
 #define QUIT '#'
 
 bool receiving = false, cleared = false;
@@ -28,16 +18,24 @@ char data[DATA_LENGTH];
 int nextIndex = 0;
 int elapsedTime;
 
+char targetMessage[] = "pisca";
 
 //Define data array methods
 void clearData(){
+  Serial.println("clearing...");
   for(int i = 0; i < DATA_LENGTH; i++){
     nextIndex = 0;
-  	data[i] = 0;
+  	data[i] = '0';
   }
   cleared = true;
 }
 
+//Read data and choose action
+void readData(){
+  for(int i = 0; i < DATA_LENGTH; i++){
+    doAction(data[i]);   
+  }
+}
 
 //Check if data buffer is a specified string
 bool isDataString(char* target){
@@ -63,19 +61,26 @@ int strLen(char* str){
   return length;
 }
 
+//Add different actions for different character readings
+bool blink = false;
+
+void doAction(char c){
+  switch(c){
+   	case QUIT:
+    	clearData();
+    	break;
+  }
+}
 
 void setup()
 {
   Serial.begin(9600);
-  pwm.begin();
-  pwm.setOscillatorFrequency(27000000);
-  pwm.setPWMFreq(SERVO_FREQ);  // Analog servos run at ~50 Hz updates
+  pinMode(13, OUTPUT);
+  servoController.resetDevices();
+  servoController.init();
+  servoController.setPWMFrequency(100);
 
-
-  //Initialize servos
-  for(int i = 0; i < 5; i++){
-    fingers[i].attach(fingerPins[i]);
-  }
+  clearData();
   
 }
 
@@ -86,16 +91,36 @@ void loop()
 
   //Get received data, check if input is detected
   rxData = Serial.read();
+  
   if(rxData < 0){
     delay(50);
   }
-  else{
-    //Pass to data array, move index if full
-    if(data[nextIndex] > 0) nextIndex++;
-    data[nextIndex] = (char)lowByte(rxData);
+  else if(rxData == 48 || rxData == 49){
+    //Pass to data array, move index if full 
+    Serial.println("Received: ");
+    Serial.println(rxData);
+    if(nextIndex > DATA_LENGTH - 1) clearData();
+    else{
+    	data[nextIndex] = (char)lowByte(rxData);
+      nextIndex++;
+    }  
+  }
+  else if((char)lowByte(rxData) == QUIT){
+    clearData();
   }
   
+  Serial.println(data);
+  Serial.println("nextIndex: ");
+  Serial.println(nextIndex);
+  Serial.println("\n");
   for(int i = 0; i < 5; i++){
-    pwm.setPWM(i,0, map(((int)data[i] - 48) * range[i]), 0, 180, SERVOMIN, SERVOMAX);
+    Serial.print("Setting pwm for: ");
+    Serial.print(i);
+    Serial.print(" as: ");
+    Serial.print(pwmServo.pwmForAngle(((int)data[i] - 48) * range[i]));
+    Serial.println("\n");
+    servoController.setChannelPWM(i,pwmServo.pwmForAngle(((int)data[i] - 48) * range[i]));
   }
+
+  delay(1500);
 }
